@@ -12,7 +12,7 @@ inputs:
   interval:
     description: The interval in minutes between metric collections
     required: false
-    default: 1
+    default: "1"
 outputs:
   time:
     description: Your output description here
