@@ -1,24 +1,17 @@
-name: The name of your action here
-description: Provide a description here
-author: Your name or organization here
-
-# Add your action's branding here. This will appear on the GitHub Marketplace.
+name: ghametricscollector
+description: A GitHub Action to collect system metrics to track performance over time
+author: wechuli
 branding:
-  icon: heart
-  color: red
-
-# Define your inputs here.
+  icon: activity
+  color: blue
 inputs:
   milliseconds:
     description: Your input description here
     required: true
     default: '1000'
-
-# Define your outputs here.
 outputs:
   time:
     description: Your output description here
-
 runs:
   using: node24
   main: dist/index.js
