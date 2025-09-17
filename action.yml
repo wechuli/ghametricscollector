@@ -5,10 +5,14 @@ branding:
   icon: activity
   color: blue
 inputs:
-  milliseconds:
-    description: Your input description here
-    required: true
-    default: '1000'
+  mode:
+    description: The monitoring mode, can minimal, extended, or full
+    required: false
+    default: minimal
+  interval:
+    description: The interval in minutes between metric collections
+    required: false
+    default: 1
 outputs:
   time:
     description: Your output description here
