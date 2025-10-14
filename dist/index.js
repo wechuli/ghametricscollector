@@ -27474,11 +27474,14 @@ async function run() {
         // Start the monitoring script in the background (non-blocking)
         const logFile = `${process.env.RUNNER_TEMP}/ghametrics_monitor.log`;
         const pidFile = `${process.env.RUNNER_TEMP}/ghametrics_monitor.pid`;
-        const logStream = external_fs_.createWriteStream(logFile, { flags: "a" });
+        // Open file descriptors for stdout/stderr redirection
+        const logFd = external_fs_.openSync(logFile, "a");
         const child = (0,external_child_process_.spawn)(__nccwpck_require__.ab + "linux.sh", args, {
             detached: true,
-            stdio: ["ignore", logStream, logStream],
+            stdio: ["ignore", logFd, logFd],
         });
+        // Close the file descriptor in the parent process
+        external_fs_.closeSync(logFd);
         // Save the PID to a file for later reference
         if (child.pid) {
             external_fs_.writeFileSync(pidFile, child.pid.toString());

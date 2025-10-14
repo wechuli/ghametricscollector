@@ -45,12 +45,17 @@ export async function run(): Promise<void> {
     // Start the monitoring script in the background (non-blocking)
     const logFile = `${process.env.RUNNER_TEMP}/ghametrics_monitor.log`;
     const pidFile = `${process.env.RUNNER_TEMP}/ghametrics_monitor.pid`;
-    const logStream = fs.createWriteStream(logFile, { flags: "a" });
+
+    // Open file descriptors for stdout/stderr redirection
+    const logFd = fs.openSync(logFile, "a");
 
     const child = spawn(scriptPath, args, {
       detached: true,
-      stdio: ["ignore", logStream, logStream],
+      stdio: ["ignore", logFd, logFd],
     });
+
+    // Close the file descriptor in the parent process
+    fs.closeSync(logFd);
 
     // Save the PID to a file for later reference
     if (child.pid) {
