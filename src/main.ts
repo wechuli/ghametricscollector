@@ -1,7 +1,8 @@
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
 import * as path from "path";
-
+import { spawn } from "child_process";
+import * as fs from "fs";
 
 /**
  * The main function for the action.
@@ -41,45 +42,44 @@ export async function run(): Promise<void> {
 
     core.info(`Executing: ${scriptPath} ${args.join(" ")}`);
 
-    // Start the monitoring script in the background
-    let stdout = "";
-    let stderr = "";
+    // Start the monitoring script in the background (non-blocking)
+    const logFile = `${process.env.RUNNER_TEMP}/ghametrics_monitor.log`;
+    const pidFile = `${process.env.RUNNER_TEMP}/ghametrics_monitor.pid`;
+    const logStream = fs.createWriteStream(logFile, { flags: "a" });
 
-    const exitCode = await exec.exec(scriptPath, args, {
-      listeners: {
-        stdout: (data: Buffer) => {
-          stdout += data.toString();
-        },
-        stderr: (data: Buffer) => {
-          stderr += data.toString();
-        },
-      },
+    const child = spawn(scriptPath, args, {
+      detached: true,
+      stdio: ["ignore", logStream, logStream],
     });
 
-    if (exitCode === 0) {
-      core.info("System monitoring script started successfully");
-      core.info(`Output file: ${outputFile}`);
-      core.info(`Monitor mode: ${mode}`);
-      core.info(`Update interval: ${interval} minutes`);
-
-      // Set outputs for other workflow steps to use
-      core.setOutput("output-file", outputFile);
-      core.setOutput("monitor-mode", mode);
-      core.setOutput("interval", interval);
-      core.setOutput("started-at", new Date().toISOString());
-    } else {
-      core.setFailed(`Script execution failed with exit code: ${exitCode}`);
+    // Save the PID to a file for later reference
+    if (child.pid) {
+      fs.writeFileSync(pidFile, child.pid.toString());
+      core.info(`Process handle saved to: ${pidFile}`);
     }
 
-    if (stdout) {
-      core.info("Script output:");
-      core.info(stdout);
-    }
+    // Unref the child process so it doesn't keep the parent alive
+    child.unref();
 
-    if (stderr) {
-      core.warning("Script stderr:");
-      core.warning(stderr);
-    }
+    core.info(
+      `System monitoring script started in background (PID: ${child.pid})`
+    );
+    core.info(`Output file: ${outputFile}`);
+    core.info(`Log file: ${logFile}`);
+    core.info(`Monitor mode: ${mode}`);
+    core.info(`Update interval: ${interval} minutes`);
+
+    // Set outputs for other workflow steps to use
+    core.setOutput("output-file", outputFile);
+    core.setOutput("log-file", logFile);
+    core.setOutput("pid-file", pidFile);
+    core.setOutput("monitor-mode", mode);
+    core.setOutput("interval", interval);
+    core.setOutput("started-at", new Date().toISOString());
+    core.setOutput("pid", child.pid?.toString() || "unknown");
+
+    core.info("Action completed - monitoring continues in background");
+    core.info(`To stop the monitor later, use: kill $(cat ${pidFile})`);
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message);
   }
