@@ -13,6 +13,10 @@ inputs:
     description: The interval in minutes between metric collections
     required: false
     default: "1"
+  metrics_url:
+    description: Optional URL to POST metrics data to at each interval
+    required: false
+    default: ""
 runs:
   using: node24
   main: dist/index.js

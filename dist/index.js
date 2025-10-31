@@ -27453,12 +27453,15 @@ async function run() {
     try {
         const mode = core.getInput("mode") || "minimal";
         const interval = core.getInput("interval") || "1";
+        const metricsUrl = core.getInput("metrics_url") || "";
         // Generate a unique UUID for this job
         const jobUuid = (0,external_crypto_.randomUUID)();
         // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
         core.info(`Starting system monitoring with mode: ${mode}, interval: ${interval} minutes`);
         core.info(`Job UUID: ${jobUuid}`);
-        // Get the path to the linux.sh script
+        if (metricsUrl) {
+            core.info(`Metrics will be POSTed to: ${metricsUrl}`);
+        } // Get the path to the linux.sh script
         const scriptPath = __nccwpck_require__.ab + "linux.sh";
         const outputFile = `${process.env.RUNNER_TEMP}/ghametrics.json`;
         // Make the script executable
@@ -27478,6 +27481,10 @@ async function run() {
             "--job-uuid",
             jobUuid,
         ];
+        // Add metrics URL if provided
+        if (metricsUrl) {
+            args.push("--metrics-url", metricsUrl);
+        }
         core.info(`Executing: ${scriptPath} ${args.join(" ")}`);
         // Start the monitoring script in the background (non-blocking)
         const logFile = `${process.env.RUNNER_TEMP}/ghametrics_monitor.log`;

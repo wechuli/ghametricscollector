@@ -15,6 +15,7 @@ MODE="minimal"
 USER_LOGIN=""
 GITHUB_REPOS=""
 JOB_UUID=""
+METRICS_URL=""
 UPDATE_INTERVAL=1  # Default 1 minute
 MAX_ENTRIES=1440    # Max entries to keep (1440 = 24 hours at 1 min interval)
 
@@ -34,6 +35,7 @@ OPTIONS:
     -u, --user USER        GitHub username for context
     -r, --repos REPOS      Comma-separated list of repos (owner/repo format)
     -j, --job-uuid UUID    Unique job identifier (UUID)
+    --metrics-url URL      Optional URL to POST metrics data to at each interval
     -i, --interval MINS    Update interval in minutes (default: 1)
     --max-entries NUM      Maximum entries to keep in array (default: 1440)
     -h, --help            Show this help message
@@ -71,6 +73,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -j|--job-uuid)
             JOB_UUID="$2"
+            shift 2
+            ;;
+        --metrics-url)
+            METRICS_URL="$2"
             shift 2
             ;;
         -i|--interval)
@@ -346,6 +352,36 @@ collect_entry() {
 }
 
 ################################################################################
+# HTTP POST Function
+################################################################################
+
+post_metrics_to_url() {
+    local entry="$1"
+    local url="$2"
+    
+    if [ -z "$url" ]; then
+        return 0
+    fi
+    
+    # Use curl to POST the JSON data
+    local http_code
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -d "$entry" \
+        --max-time 10 \
+        "$url" 2>/dev/null)
+    
+    if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Successfully posted metrics to URL (HTTP $http_code)"
+        return 0
+    else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Warning: Failed to post metrics to URL (HTTP $http_code)"
+        return 1
+    fi
+}
+
+################################################################################
 # Array Management Functions
 ################################################################################
 
@@ -366,6 +402,11 @@ initialize_file() {
 
 append_entry() {
     local new_entry="$1"
+    
+    # Post to URL if configured (do this first, even if file operations fail)
+    if [ -n "$METRICS_URL" ]; then
+        post_metrics_to_url "$new_entry" "$METRICS_URL"
+    fi
     
     acquire_lock
     
@@ -430,6 +471,7 @@ main() {
     echo "User: ${USER_LOGIN:-$(whoami)}"
     [ -n "$GITHUB_REPOS" ] && echo "Monitoring repos: $GITHUB_REPOS"
     [ -n "$JOB_UUID" ] && echo "Job UUID: $JOB_UUID"
+    [ -n "$METRICS_URL" ] && echo "Metrics URL: $METRICS_URL"
     echo "Update interval: ${UPDATE_INTERVAL} minute(s)"
     echo "Max entries: $MAX_ENTRIES"
     echo "═══════════════════════════════════════════════════════════"

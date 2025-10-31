@@ -14,6 +14,7 @@ export async function run(): Promise<void> {
   try {
     const mode: string = core.getInput("mode") || "minimal";
     const interval: string = core.getInput("interval") || "1";
+    const metricsUrl: string = core.getInput("metrics_url") || "";
 
     // Generate a unique UUID for this job
     const jobUuid: string = randomUUID();
@@ -23,8 +24,9 @@ export async function run(): Promise<void> {
       `Starting system monitoring with mode: ${mode}, interval: ${interval} minutes`
     );
     core.info(`Job UUID: ${jobUuid}`);
-
-    // Get the path to the linux.sh script
+    if (metricsUrl) {
+      core.info(`Metrics will be POSTed to: ${metricsUrl}`);
+    } // Get the path to the linux.sh script
     const scriptPath = path.join(__dirname, "scripts", "linux.sh");
     const outputFile = `${process.env.RUNNER_TEMP}/ghametrics.json`;
 
@@ -47,6 +49,11 @@ export async function run(): Promise<void> {
       jobUuid,
     ];
 
+    // Add metrics URL if provided
+    if (metricsUrl) {
+      args.push("--metrics-url", metricsUrl);
+    }
+
     core.info(`Executing: ${scriptPath} ${args.join(" ")}`);
 
     // Start the monitoring script in the background (non-blocking)
@@ -68,7 +75,7 @@ export async function run(): Promise<void> {
     if (child.pid) {
       fs.writeFileSync(pidFile, child.pid.toString());
       core.info(`Process handle saved to: ${pidFile}`);
-      
+
       // Save state for post action cleanup
       core.saveState("monitorPid", child.pid.toString());
       core.saveState("outputFile", outputFile);
