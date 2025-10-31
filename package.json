@@ -25,7 +25,7 @@
   "scripts": {
     "build": "tsc",
     "bundle": "npm run format:write && npm run package",
-    "package": "ncc build src/index.ts --license licenses.txt",
+    "package": "ncc build src/index.ts --license licenses.txt && ncc build src/post.ts -o dist --license licenses.txt",
     "test": "jest",
     "all": "npm run build && npm run test && npm run package"
   },
@@ -60,6 +60,7 @@
     ]
   },
   "dependencies": {
+    "@actions/artifact": "^4.0.0",
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.0",
     "@octokit/rest": "^20.1.1",

@@ -13,9 +13,7 @@ inputs:
     description: The interval in minutes between metric collections
     required: false
     default: "1"
-outputs:
-  time:
-    description: Your output description here
 runs:
   using: node24
   main: dist/index.js
+  post: dist/post.js

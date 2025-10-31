@@ -14,6 +14,7 @@ OUTPUT_FILE="/tmp/system_monitor.json"
 MODE="minimal"
 USER_LOGIN=""
 GITHUB_REPOS=""
+JOB_UUID=""
 UPDATE_INTERVAL=1  # Default 1 minute
 MAX_ENTRIES=1440    # Max entries to keep (1440 = 24 hours at 1 min interval)
 
@@ -32,6 +33,7 @@ OPTIONS:
     -m, --mode MODE        Monitor mode: minimal, extended, full (default: minimal)
     -u, --user USER        GitHub username for context
     -r, --repos REPOS      Comma-separated list of repos (owner/repo format)
+    -j, --job-uuid UUID    Unique job identifier (UUID)
     -i, --interval MINS    Update interval in minutes (default: 1)
     --max-entries NUM      Maximum entries to keep in array (default: 1440)
     -h, --help            Show this help message
@@ -65,6 +67,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -r|--repos)
             GITHUB_REPOS="$2"
+            shift 2
+            ;;
+        -j|--job-uuid)
+            JOB_UUID="$2"
             shift 2
             ;;
         -i|--interval)
@@ -250,9 +256,11 @@ collect_entry() {
     entry=$(echo "$entry" | jq \
         --arg ts "$timestamp" \
         --arg user "$current_user" \
+        --arg job_uuid "$JOB_UUID" \
         --argjson repos "$repos_json" \
         '{
             timestamp: $ts,
+            job_uuid: $job_uuid,
             github_context: {
                 user: $user,
                 repositories: $repos
@@ -421,6 +429,7 @@ main() {
     echo "Mode: $MODE"
     echo "User: ${USER_LOGIN:-$(whoami)}"
     [ -n "$GITHUB_REPOS" ] && echo "Monitoring repos: $GITHUB_REPOS"
+    [ -n "$JOB_UUID" ] && echo "Job UUID: $JOB_UUID"
     echo "Update interval: ${UPDATE_INTERVAL} minute(s)"
     echo "Max entries: $MAX_ENTRIES"
     echo "═══════════════════════════════════════════════════════════"
