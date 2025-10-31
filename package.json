@@ -25,7 +25,7 @@
   "scripts": {
     "build": "tsc",
     "bundle": "npm run format:write && npm run package",
-    "package": "ncc build src/index.ts --license licenses.txt && ncc build src/post.ts -o dist --license licenses.txt",
+    "package": "ncc build src/index.ts --license licenses.txt -o dist && ncc build src/post.ts --license licenses.txt -o dist/post_build && mv dist/post_build/index.js dist/post.js && rm -rf dist/post_build",
     "test": "jest",
     "all": "npm run build && npm run test && npm run package"
   },

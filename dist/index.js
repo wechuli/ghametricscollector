@@ -27435,7 +27435,10 @@ var external_path_ = __nccwpck_require__(6928);
 var external_child_process_ = __nccwpck_require__(5317);
 // EXTERNAL MODULE: external "fs"
 var external_fs_ = __nccwpck_require__(9896);
+// EXTERNAL MODULE: external "crypto"
+var external_crypto_ = __nccwpck_require__(6982);
 ;// CONCATENATED MODULE: ./src/main.ts
+
 
 
 
@@ -27450,8 +27453,11 @@ async function run() {
     try {
         const mode = core.getInput("mode") || "minimal";
         const interval = core.getInput("interval") || "1";
+        // Generate a unique UUID for this job
+        const jobUuid = (0,external_crypto_.randomUUID)();
         // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
         core.info(`Starting system monitoring with mode: ${mode}, interval: ${interval} minutes`);
+        core.info(`Job UUID: ${jobUuid}`);
         // Get the path to the linux.sh script
         const scriptPath = __nccwpck_require__.ab + "linux.sh";
         const outputFile = `${process.env.RUNNER_TEMP}/ghametrics.json`;
@@ -27469,6 +27475,8 @@ async function run() {
             process.env.GITHUB_ACTOR || "github-action",
             "--repos",
             process.env.GITHUB_REPOSITORY || "",
+            "--job-uuid",
+            jobUuid,
         ];
         core.info(`Executing: ${scriptPath} ${args.join(" ")}`);
         // Start the monitoring script in the background (non-blocking)
@@ -27486,6 +27494,10 @@ async function run() {
         if (child.pid) {
             external_fs_.writeFileSync(pidFile, child.pid.toString());
             core.info(`Process handle saved to: ${pidFile}`);
+            // Save state for post action cleanup
+            core.saveState("monitorPid", child.pid.toString());
+            core.saveState("outputFile", outputFile);
+            core.saveState("logFile", logFile);
         }
         // Unref the child process so it doesn't keep the parent alive
         child.unref();
@@ -27494,16 +27506,7 @@ async function run() {
         core.info(`Log file: ${logFile}`);
         core.info(`Monitor mode: ${mode}`);
         core.info(`Update interval: ${interval} minutes`);
-        // Set outputs for other workflow steps to use
-        core.setOutput("output-file", outputFile);
-        core.setOutput("log-file", logFile);
-        core.setOutput("pid-file", pidFile);
-        core.setOutput("monitor-mode", mode);
-        core.setOutput("interval", interval);
-        core.setOutput("started-at", new Date().toISOString());
-        core.setOutput("pid", child.pid?.toString() || "unknown");
         core.info("Action completed - monitoring continues in background");
-        core.info(`To stop the monitor later, use: kill $(cat ${pidFile})`);
     }
     catch (error) {
         if (error instanceof Error)
